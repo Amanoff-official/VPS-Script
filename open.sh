@@ -234,7 +234,7 @@ ${Purple}|———————————————————————�
 }
 
 # Täze ulanyjy döretmek
-NewUser(){
+NewOpenUser(){
 	echo -e "
 ${Purple}|————————————————————————————————————|${Font_default} 
 ${Purple}|${Font_default}${Purple}—— Tegi saýlaň ——${Font_default}${Purple}|${Font_default}
@@ -905,7 +905,7 @@ ${Purple}|———————————————————————�
 		DeleteServer
 		;;
 		3)
-		NewUser
+		NewOpenUser
 		;;
 		4)
 		DeleteUser
